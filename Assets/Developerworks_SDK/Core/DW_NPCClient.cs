@@ -69,6 +69,14 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. This indicates that you haven't call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                return null;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
             if (!gameObject.activeInHierarchy)
             {
@@ -133,24 +141,25 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. Please call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                return null;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
-            
+
             if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError("NPC client is not active");
                 _isTalking = false;
                 return null;
             }
-            
+
             if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(schemaName))
             {
-                _isTalking = false;
-                return null;
-            }
-
-            if (_chatClient == null)
-            {
-                Debug.LogError("Chat client not initialized. Make sure SDK is properly set up.");
                 _isTalking = false;
                 return null;
             }
@@ -213,24 +222,25 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. Please call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                return default;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
-            
+
             if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError("NPC client is not active");
                 _isTalking = false;
                 return default;
             }
-            
+
             if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(schemaName))
             {
-                _isTalking = false;
-                return default;
-            }
-
-            if (_chatClient == null)
-            {
-                Debug.LogError("Chat client not initialized. Make sure SDK is properly set up.");
                 _isTalking = false;
                 return default;
             }
@@ -355,6 +365,16 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. Please call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                onChunk?.Invoke(null);
+                onComplete?.Invoke(null);
+                return;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
             if (string.IsNullOrEmpty(message))
             {
@@ -625,24 +645,25 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. Please call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                return null;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
-            
+
             if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError("NPC client is not active");
                 _isTalking = false;
                 return null;
             }
-            
+
             if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(schemaName))
             {
-                _isTalking = false;
-                return null;
-            }
-
-            if (_chatClient == null)
-            {
-                Debug.LogError("Chat client not initialized. Make sure SDK is properly set up.");
                 _isTalking = false;
                 return null;
             }
@@ -701,24 +722,25 @@ namespace Developerworks_SDK
         {
             var token = cancellationToken ?? this.GetCancellationTokenOnDestroy();
             _isTalking = true;
+
+            if (_chatClient == null)
+            {
+                Debug.LogError("[NPCClient] Chat client not initialized. Please call DW_SDK.InitializeAsync() first and wait for it to complete.");
+                _isTalking = false;
+                return default;
+            }
+
             await UniTask.WaitUntil(() => IsReady);
-            
+
             if (!gameObject.activeInHierarchy)
             {
                 Debug.LogError("NPC client is not active");
                 _isTalking = false;
                 return default;
             }
-            
+
             if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(schemaName))
             {
-                _isTalking = false;
-                return default;
-            }
-
-            if (_chatClient == null)
-            {
-                Debug.LogError("Chat client not initialized. Make sure SDK is properly set up.");
                 _isTalking = false;
                 return default;
             }
