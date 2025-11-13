@@ -15,19 +15,21 @@ public class Demo_ExampleGameManager : MonoBehaviour
     [SerializeField] private Image _image;
     async void Start()
     {
-        /* 初始化 Developerworks SDK。
-         这是使用SDK任何功能之前都必须调用的第一步，这会开始读取本地的玩家信息，如果未登录则自动打开登录窗口。
-         如果传入您的开发者密钥（Developer Key），则会跳过任何鉴权。
-         Initialize Developerworks SDK.
-         This must be called before everything, and it will start to read local player information
-         and if there is not, it will automatically start up the login modal.
-         If you pass in your developer key, the sdk skips player validation.
+        /* 初始化 PlayKit SDK。
+         SDK 会自动创建，无需在场景中拖入 Prefab。
+         在使用任何功能前调用 InitializeAsync()，它会读取配置（Tools > PlayKit SDK > Settings）并处理玩家认证。
+         如果未登录，会自动打开登录窗口。
+
+         Initialize PlayKit SDK.
+         The SDK instance is created automatically - no need to drag prefabs into scenes.
+         Call InitializeAsync() before using any features. It loads configuration (Tools > PlayKit SDK > Settings)
+         and handles player authentication. If not logged in, it will automatically show the login modal.
          */
         var result = await PlayKit_SDK.PlayKit_SDK.InitializeAsync();
 
         if(!result)
         {
-            Debug.LogError("initialization failed");
+            Debug.LogError("SDK initialization failed. Please check your configuration in Tools > PlayKit SDK > Settings");
             return;
         }
 

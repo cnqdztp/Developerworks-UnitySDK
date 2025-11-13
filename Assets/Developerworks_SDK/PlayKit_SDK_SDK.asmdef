@@ -1,6 +1,6 @@
 {
-    "name": "Developerworks_SDK",
-    "rootNamespace": "Developerworks_SDK",
+    "name": "PlayKit_SDK",
+    "rootNamespace": "PlayKit_SDK",
     "references": [
         "UniTask"
     ],

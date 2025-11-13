@@ -24,7 +24,7 @@ namespace PlayKit_SDK.Editor
             EditorApplication.delayCall += () => CheckForUpdatesAuto();
         }
 
-        [MenuItem("Developerworks SDK/Check for Updates")]
+        [MenuItem("PlayKit SDK/Check for Updates")]
         private static void CheckForUpdatesManual()
         {
             CheckForUpdates(true);
@@ -48,7 +48,7 @@ namespace PlayKit_SDK.Editor
             CheckForUpdates(false);
         }
 
-        private static async UniTaskVoid CheckForUpdates(bool isManual)
+        public static async UniTaskVoid CheckForUpdates(bool isManual)
         {
             using (var webRequest = UnityWebRequest.Get(VERSION_API_URL))
             {

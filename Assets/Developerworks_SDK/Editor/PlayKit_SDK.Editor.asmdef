@@ -1,8 +1,8 @@
 {
-    "name": "Developerworks_SDK.Editor",
-    "rootNamespace": "Developerworks_SDK.Editor",
+    "name": "PlayKit_SDK.Editor",
+    "rootNamespace": "PlayKit_SDK.Editor",
     "references": [
-        "Developerworks_SDK",
+        "PlayKit_SDK",
         "UniTask"
     ],
     "includePlatforms": [

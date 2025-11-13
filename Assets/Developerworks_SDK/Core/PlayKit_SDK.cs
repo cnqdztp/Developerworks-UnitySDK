@@ -6,31 +6,58 @@ namespace PlayKit_SDK
 {
     public class PlayKit_SDK : MonoBehaviour
     {
-        public const string VERSION = "v0.1.7.3-beta";
+        public const string VERSION = "v0.2.0.0-beta";
 
-        [Tooltip("Your game ID from PlayKit platform 从PlayKit平台获取的游戏ID")]
-        [SerializeField] private string gameId;
-        [Tooltip("Default chat model to use (e.g., gpt-4o-mini) 默认使用的对话模型（例如：gpt-4o-mini）")]
-        [SerializeField] private string defaultChatModel;
-        [Tooltip("Default image generation model to use 默认使用的图像生成模型")]
-        [SerializeField] private string defaultImageModel;
-        [Tooltip("Reference to PlayKit_AuthManager component PlayKit_AuthManager组件引用")]
-        [SerializeField] private Auth.PlayKit_AuthManager authManager;
-        [Tooltip("Ignore developer token (use player tokens only) 忽略开发者令牌（仅使用玩家令牌）")]
-        [SerializeField] private bool ignoreDeveloperToken;
-        
+        // Configuration is now loaded from PlayKitSettings ScriptableObject
+        // No need to manually place prefabs in scenes - SDK initializes automatically at runtime
+        // Configure via: Tools > PlayKit SDK > Settings
+
         public static PlayKit_SDK Instance { get; private set; }
+
+        // Auth manager is created dynamically instead of being serialized
+        private Auth.PlayKit_AuthManager authManager;
+
+        /// <summary>
+        /// Automatically creates SDK instance at runtime startup.
+        /// No manual prefab placement needed.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void AutoInitialize()
+        {
+            // Check if an instance already exists in the scene (for backward compatibility)
+            if (Instance != null)
+            {
+                Debug.LogWarning("[PlayKit SDK] SDK instance already exists in scene. Auto-initialization skipped. Consider removing the old prefab.");
+                return;
+            }
+
+            // Create SDK GameObject automatically
+            GameObject sdkObject = new GameObject("PlayKit_SDK");
+            Instance = sdkObject.AddComponent<PlayKit_SDK>();
+            DontDestroyOnLoad(sdkObject);
+
+            Debug.Log("[PlayKit SDK] SDK instance created automatically. Configure via Tools > PlayKit SDK > Settings");
+        }
 
         private void Awake()
         {
+            // Handle manual prefab instances (backward compatibility)
             if (Instance == null)
             {
                 Instance = this;
-                DontDestroyOnLoad(this);
+                DontDestroyOnLoad(gameObject);
+                Debug.LogWarning("[PlayKit SDK] SDK initialized from scene prefab. Consider removing the prefab - SDK now initializes automatically.");
             }
-            else
+            else if (Instance != this)
             {
+                Debug.LogWarning("[PlayKit SDK] Duplicate SDK instance detected. Destroying duplicate.");
                 Destroy(gameObject);
+            }
+
+            // Create AuthManager component if not exists
+            if (authManager == null)
+            {
+                authManager = gameObject.AddComponent<Auth.PlayKit_AuthManager>();
             }
         }
 
@@ -44,31 +71,53 @@ namespace PlayKit_SDK
         /// <summary>
         /// Asynchronously initializes the SDK. This must complete successfully before creating clients.
         /// It handles configuration loading and user authentication.
+        /// Configuration is loaded from PlayKitSettings (Tools > PlayKit SDK > Settings).
         /// </summary>
+        /// <param name="developerToken">Optional developer token. If not provided, uses token from EditorPrefs (editor only).</param>
         /// <returns>True if initialization and authentication were successful, otherwise false.</returns>
         public static async UniTask<bool> InitializeAsync(string developerToken = null)
         {
             if (!Instance)
             {
-                Debug.LogError("Please place DW_SDK object in your FIRST scene.");
+                Debug.LogError("[PlayKit SDK] SDK instance not found. This should not happen with auto-initialization.");
                 return false;
             }
 
-            if (string.IsNullOrEmpty(Instance.gameId))
-            {
-                Debug.LogError("Please fill in gameId from your game. Get one from https://playkit.agentlandlab.com \n请填写gameId到你的DW_SDK预制体中，从https://playkit.agentlandlab.com获取");
-                return false;
-            }
-            
-            Debug.Log("[Developerworks SDK] Initializing...");
+            Debug.Log("[PlayKit SDK] Initializing...");
             if (_isInitialized) return true;
 
-
-
-            if (developerToken != null && !Instance.ignoreDeveloperToken)
+            // Load settings from PlayKitSettings ScriptableObject
+            var settings = Developerworks.SDK.PlayKitSettings.Instance;
+            if (settings == null)
             {
-                Debug.Log("[Developerworks SDK] You are loading a developer token, this can cost you money, but is fine for development...");
-                PlayKitAuthManager.Setup(Instance.gameId, developerToken);
+                Debug.LogError("[PlayKit SDK] PlayKitSettings not found. Please configure the SDK via Tools > PlayKit SDK > Settings");
+                return false;
+            }
+
+            // Validate settings
+            if (!settings.Validate(out string errorMessage))
+            {
+                Debug.LogError($"[PlayKit SDK] Configuration error: {errorMessage}");
+                return false;
+            }
+
+            string gameId = settings.GameId;
+
+            // Use developer token from settings if not explicitly provided
+            if (developerToken == null && !settings.IgnoreDeveloperToken)
+            {
+                string settingsToken = settings.DeveloperToken;
+                if (!string.IsNullOrEmpty(settingsToken))
+                {
+                    developerToken = settingsToken;
+                    Debug.Log("[PlayKit SDK] Using developer token from settings for development.");
+                }
+            }
+
+            if (developerToken != null && !settings.IgnoreDeveloperToken)
+            {
+                Debug.Log("[PlayKit SDK] You are loading a developer token, this has strict rate limit and should not be used for production...");
+                PlayKitAuthManager.Setup(gameId, developerToken);
 
                 // Show developer key warning in non-editor builds
 #if !UNITY_EDITOR
@@ -77,10 +126,9 @@ namespace PlayKit_SDK
             }
             else
             {
-                
-                PlayKitAuthManager.Setup(Instance.gameId);
-
+                PlayKitAuthManager.Setup(gameId);
             }
+
             bool authSuccess = await PlayKitAuthManager.AuthenticateAsync();
 
             if (!authSuccess)
@@ -158,15 +206,17 @@ namespace PlayKit_SDK
             {
                 if (!Instance)
                 {
-                    Debug.LogError("Please place DW_SDK object in your FIRST scene.");
+                    Debug.LogError("[PlayKit SDK] SDK instance not found. This should not happen with auto-initialization.");
+                    return null;
                 }
                 if (!_isInitialized)
                 {
-                    Debug.LogError("SDK not initialized. Please call DW_SDK.InitializeAsync() and wait for it to complete first.");
+                    Debug.LogError("[PlayKit SDK] SDK not initialized. Please call PlayKit_SDK.InitializeAsync() and wait for it to complete first.");
                     return null;
                 }
-                
-                string model = modelName ?? Instance.defaultChatModel;
+
+                // Load default model from settings if not specified
+                string model = modelName ?? Developerworks.SDK.PlayKitSettings.Instance?.DefaultChatModel;
                 var chatService = new Services.ChatService(_chatProvider);
                 return new PlayKit_AIChatClient(model, chatService, _objectProvider);
             }
@@ -178,22 +228,23 @@ namespace PlayKit_SDK
             {
                 if (!Instance)
                 {
-                    Debug.LogError("Please place DW_SDK object in your FIRST scene.");
+                    Debug.LogError("[PlayKit SDK] SDK instance not found. This should not happen with auto-initialization.");
                     return null;
                 }
                 if (!_isInitialized)
                 {
-                    Debug.LogError("SDK not initialized. Please call DW_SDK.InitializeAsync() and wait for it to complete first.");
+                    Debug.LogError("[PlayKit SDK] SDK not initialized. Please call PlayKit_SDK.InitializeAsync() and wait for it to complete first.");
                     return null;
                 }
-                
-                string model = modelName ?? Instance.defaultImageModel;
+
+                // Load default model from settings if not specified
+                string model = modelName ?? Developerworks.SDK.PlayKitSettings.Instance?.DefaultImageModel;
                 if (string.IsNullOrEmpty(model))
                 {
-                    Debug.LogError("No image model specified. Please set defaultImageModel in DW_SDK or provide a model name.");
+                    Debug.LogError("[PlayKit SDK] No image model specified. Please set Default Image Model in Tools > PlayKit SDK > Settings or provide a model name.");
                     return null;
                 }
-                
+
                 return new PlayKit_AIImageClient(model, _imageProvider);
             }
 
@@ -206,18 +257,18 @@ namespace PlayKit_SDK
             {
                 if (!Instance)
                 {
-                    Debug.LogError("Please place DW_SDK object in your FIRST scene.");
+                    Debug.LogError("[PlayKit SDK] SDK instance not found. This should not happen with auto-initialization.");
                     return null;
                 }
                 if (!_isInitialized)
                 {
-                    Debug.LogError("SDK not initialized. Please call DW_SDK.InitializeAsync() and wait for it to complete first.");
+                    Debug.LogError("[PlayKit SDK] SDK not initialized. Please call PlayKit_SDK.InitializeAsync() and wait for it to complete first.");
                     return null;
                 }
 
                 if (string.IsNullOrEmpty(modelName))
                 {
-                    Debug.LogError("Transcription model name cannot be empty. Please specify a model like 'whisper-1'.");
+                    Debug.LogError("[PlayKit SDK] Transcription model name cannot be empty. Please specify a model like 'whisper-1'.");
                     return null;
                 }
 
@@ -240,11 +291,12 @@ namespace PlayKit_SDK
             {
                 if (!Instance)
                 {
-                    Debug.LogError("Please place DW_SDK object in your FIRST scene.");
+                    Debug.LogError("[PlayKit SDK] SDK instance not found. This should not happen with auto-initialization.");
+                    return;
                 }
                 if (!_isInitialized)
                 {
-                    Debug.LogError("SDK not initialized. Please call DW_SDK.InitializeAsync() and wait for it to complete first.");
+                    Debug.LogError("[PlayKit SDK] SDK not initialized. Please call PlayKit_SDK.InitializeAsync() and wait for it to complete first.");
                     return;
                 }
 
